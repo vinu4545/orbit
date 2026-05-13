@@ -12,10 +12,19 @@ export function App() {
   return (
     <Routes>
       <Route path="/" element={<LegacyFramerPage htmlPath="/legacy/index.html" />} />
+      <Route path="/index.html" element={<LegacyFramerPage htmlPath="/legacy/index.html" />} />
+
       <Route path="/about" element={<LegacyFramerPage htmlPath="/legacy/about.html" />} />
+      <Route path="/about.html" element={<LegacyFramerPage htmlPath="/legacy/about.html" />} />
+
       <Route path="/blog" element={<LegacyFramerPage htmlPath="/legacy/blog.html" />} />
+      <Route path="/blog.html" element={<LegacyFramerPage htmlPath="/legacy/blog.html" />} />
+
       <Route path="/contact" element={<LegacyFramerPage htmlPath="/legacy/contact.html" />} />
+      <Route path="/contact.html" element={<LegacyFramerPage htmlPath="/legacy/contact.html" />} />
+
       <Route path="/404" element={<LegacyFramerPage htmlPath="/legacy/404.html" />} />
+      <Route path="/404.html" element={<LegacyFramerPage htmlPath="/legacy/404.html" />} />
 
       {BLOG_SLUGS.map((slug) => (
         <Route
@@ -26,15 +35,14 @@ export function App() {
       ))}
 
       {BLOG_SLUGS.map((slug) => (
-        <Route key={`${slug}-html`} path={`/blog/${slug}.html`} element={<Navigate to={`/blog/${slug}`} replace />} />
+        <Route
+          key={`${slug}-html`}
+          path={`/blog/${slug}.html`}
+          element={<LegacyFramerPage htmlPath={`/legacy/blog/${slug}.html`} />}
+        />
       ))}
 
-      <Route path="/index.html" element={<Navigate to="/" replace />} />
-      <Route path="/about.html" element={<Navigate to="/about" replace />} />
-      <Route path="/blog.html" element={<Navigate to="/blog" replace />} />
-      <Route path="/contact.html" element={<Navigate to="/contact" replace />} />
-      <Route path="/404.html" element={<Navigate to="/404" replace />} />
-      <Route path="*" element={<Navigate to="/404" replace />} />
+      <Route path="*" element={<Navigate to="/404.html" replace />} />
     </Routes>
   );
 }

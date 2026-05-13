@@ -5,22 +5,6 @@ type LegacyFramerPageProps = {
   htmlPath: string;
 };
 
-const PATH_REWRITES: Record<string, string> = {
-  "index.html": "/",
-  "about.html": "/about",
-  "blog.html": "/blog",
-  "contact.html": "/contact",
-  "404.html": "/404",
-  "blog/5-must-have-ai-tools-to-streamline-your-business.html":
-    "/blog/5-must-have-ai-tools-to-streamline-your-business",
-  "blog/ai-vs-manual-work-which-one-saves-more-time-money.html":
-    "/blog/ai-vs-manual-work-which-one-saves-more-time-money",
-  "blog/how-ai-is-transforming-workflow-automation-for-businesses.html":
-    "/blog/how-ai-is-transforming-workflow-automation-for-businesses",
-  "blog/the-future-of-ai-automation-how-it-s-changing-business-operations.html":
-    "/blog/the-future-of-ai-automation-how-it-s-changing-business-operations"
-};
-
 const HEAD_SELECTOR = [
   "meta[name='viewport']",
   "meta[name='description']",
@@ -59,14 +43,22 @@ function copyScript(oldScript: HTMLScriptElement): HTMLScriptElement {
   return replacement;
 }
 
-function normalizeHref(href: string): string {
+function resolveInternalHref(href: string): string | null {
   const trimmed = href.trim();
-  if (trimmed.startsWith("http://") || trimmed.startsWith("https://") || trimmed.startsWith("mailto:") || trimmed.startsWith("tel:") || trimmed.startsWith("#")) {
-    return trimmed;
+  if (!trimmed || trimmed.startsWith("mailto:") || trimmed.startsWith("tel:")) {
+    return null;
   }
 
-  const clean = trimmed.replace(/^\.?\//, "");
-  return PATH_REWRITES[clean] ?? trimmed;
+  if (trimmed.startsWith("#")) {
+    return window.location.pathname + window.location.search + trimmed;
+  }
+
+  const url = new URL(trimmed, window.location.href);
+  if (url.origin !== window.location.origin) {
+    return null;
+  }
+
+  return `${url.pathname}${url.search}${url.hash}`;
 }
 
 export function LegacyFramerPage({ htmlPath }: LegacyFramerPageProps) {
@@ -83,7 +75,7 @@ export function LegacyFramerPage({ htmlPath }: LegacyFramerPageProps) {
     async function renderLegacyPage() {
       const response = await fetch(htmlPath, { cache: "no-store" });
       if (!response.ok) {
-        navigate("/404", { replace: true });
+        navigate("/404.html", { replace: true });
         return;
       }
 
@@ -107,29 +99,30 @@ export function LegacyFramerPage({ htmlPath }: LegacyFramerPageProps) {
       const mount = mountRef.current;
       mount.innerHTML = parsed.body.innerHTML;
 
-      for (const anchor of Array.from(mount.querySelectorAll("a[href]"))) {
+      for (const anchor of Array.from(mount.querySelectorAll<HTMLAnchorElement>("a[href]"))) {
         const rawHref = anchor.getAttribute("href");
         if (!rawHref) {
           continue;
         }
 
-        const normalizedHref = normalizeHref(rawHref);
-        if (normalizedHref !== rawHref) {
-          anchor.setAttribute("href", normalizedHref);
+        const internalHref = resolveInternalHref(rawHref);
+        if (!internalHref) {
+          continue;
         }
 
-        if (normalizedHref.startsWith("/")) {
-          anchor.addEventListener("click", (event) => {
-            if (!(event instanceof MouseEvent)) {
-              return;
-            }
-            if (event.defaultPrevented || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) {
-              return;
-            }
-            event.preventDefault();
-            navigate(normalizedHref);
-          });
-        }
+        anchor.addEventListener("click", (event) => {
+          if (!(event instanceof MouseEvent)) {
+            return;
+          }
+          if (event.defaultPrevented || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) {
+            return;
+          }
+          if (anchor.target && anchor.target !== "_self") {
+            return;
+          }
+          event.preventDefault();
+          navigate(internalHref);
+        });
       }
 
       for (const script of Array.from(mount.querySelectorAll("script"))) {
